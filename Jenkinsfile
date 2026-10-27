@@ -4,68 +4,45 @@ pipeline {
 
     environment {
         APP_IMAGE = 'seleniumtestingdemoapp:latest'
-        CONTAINER_NAME = 'seleniumtestingdemoapp-test'
+        CONTAINER_NAME = 'registrationapp'
         APP_URL = 'http://127.0.0.1:5000'
     }
 
     stages {
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    python3 -m pip install --upgrade pip
-                    python3 -m pip install Flask pytest selenium
-                '''
+                bat 'py -m pip install -r requirements.txt'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ${APP_IMAGE} .'
+                bat 'docker build -t %APP_IMAGE% .'
             }
         }
 
         stage('Start Application') {
             steps {
-                sh '''
-                    docker rm -f ${CONTAINER_NAME} || true
-                    docker run -d --name ${CONTAINER_NAME} \
-                        -p 5000:5000 ${APP_IMAGE}
-
-                    for i in $(seq 1 30); do
-                        if curl -fsS ${APP_URL}/register > /dev/null; then
-                            echo "Application is ready"
-                            exit 0
-                        fi
-                        sleep 2
-                    done
-
-                    docker logs ${CONTAINER_NAME}
-                    exit 1
+                bat 'docker rm -f %CONTAINER_NAME% 2>NUL'
+                bat 'docker run -d --name %CONTAINER_NAME% -p 5000:5000 %APP_IMAGE%'
+                bat '''
+                    powershell -NoProfile -Command "$ok=$false; for($i=0; $i -lt 30; $i++){ try { Invoke-WebRequest 'http://127.0.0.1:5000/register' -UseBasicParsing -TimeoutSec 2 | Out-Null; $ok=$true; break } catch { Start-Sleep -Seconds 2 } }; if(-not $ok){ docker logs registrationapp; exit 1 }"
                 '''
             }
         }
 
         stage('Run Selenium Tests') {
             steps {
-                sh 'python3 -m pytest -v tests/test_registrationapp.py'
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                    kubectl apply -f deployment.yaml
-                    kubectl apply -f service.yaml
-                '''
+                bat 'py -m pytest -v --junitxml=test-results.xml tests/test_registrationapp.py'
             }
         }
     }
 
     post {
         always {
-            sh 'docker rm -f ${CONTAINER_NAME} || true'
             junit testResults: 'test-results.xml',
                   allowEmptyResults: true
+            bat 'docker rm -f registrationapp 2>NUL'
         }
     }
 }
