@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Install Dependencies') {
             steps {
-                bat 'py -m pip install -r requirements.txt'
+                bat '"C:\\Users\\Harini\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m pip install -r requirements.txt'
             }
         }
 
@@ -33,7 +33,7 @@ pipeline {
 
         stage('Run Selenium Tests') {
             steps {
-                bat 'py -m pytest -v --junitxml=test-results.xml tests/test_registrationapp.py'
+                bat '"C:\\Users\\Harini\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m pytest -v --junitxml=test-results.xml tests/test_registrationapp.py'
             }
         }
     }
